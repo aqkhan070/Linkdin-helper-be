@@ -1,0 +1,498 @@
+{
+  "info": {
+    "name": "LinkedIn Helper Backend - API Collection",
+    "description": "Complete API collection for the LinkedIn Helper Backend authentication system.\n\nBase URL: http://localhost:5000\n\nSetup:\n1. Run migration: npm run migrate\n2. Start server: npm run dev\n3. Register a user first, then use the tokens for protected routes.",
+    "version": "1.0.0",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000",
+      "type": "string"
+    },
+    {
+      "key": "accessToken",
+      "value": "",
+      "type": "string",
+      "description": "JWT access token - auto-populated after login/register"
+    },
+    {
+      "key": "refreshToken",
+      "value": "",
+      "type": "string",
+      "description": "JWT refresh token - auto-populated after login/register"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health Check",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "health"]
+            },
+            "description": "Check if the backend server is running and healthy."
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"message\": \"LinkedIn Helper Backend is running!\",\n  \"timestamp\": \"2026-10-22T05:30:00.000Z\",\n  \"environment\": \"development\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Auth - Public Routes",
+      "item": [
+        {
+          "name": "Register (Sign Up)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const response = pm.response.json();",
+                  "if (response.success && response.data && response.data.tokens) {",
+                  "  pm.collectionVariables.set('accessToken', response.data.tokens.accessToken);",
+                  "  pm.collectionVariables.set('refreshToken', response.data.tokens.refreshToken);",
+                  "  console.log('✅ Tokens saved to collection variables');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "register"]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Ahtsham Shakoor\",\n  \"email\": \"ahtsham@example.com\",\n  \"password\": \"Test1234\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Create a new user account.\n\nValidation Rules:\n- fullName: required, 2-100 characters\n- email: required, valid email format\n- password: required, min 6 chars, must contain at least one number"
+          },
+          "response": [
+            {
+              "name": "201 - Created",
+              "status": "Created",
+              "code": 201,
+              "body": "{\n  \"success\": true,\n  \"message\": \"Account created successfully!\",\n  \"data\": {\n    \"user\": {\n      \"id\": \"uuid-here\",\n      \"fullName\": \"Ahtsham Shakoor\",\n      \"email\": \"ahtsham@example.com\",\n      \"isActive\": true,\n      \"isVerified\": false,\n      \"createdAt\": \"2026-10-22T05:30:00.000Z\"\n    },\n    \"tokens\": {\n      \"accessToken\": \"eyJhbGciOi...\",\n      \"refreshToken\": \"eyJhbGciOi...\",\n      \"expiresIn\": \"1h\"\n    }\n  }\n}"
+            },
+            {
+              "name": "409 - Email Already Exists",
+              "status": "Conflict",
+              "code": 409,
+              "body": "{\n  \"success\": false,\n  \"message\": \"An account with this email already exists.\"\n}"
+            },
+            {
+              "name": "400 - Validation Error",
+              "status": "Bad Request",
+              "code": 400,
+              "body": "{\n  \"success\": false,\n  \"message\": \"Validation failed\",\n  \"errors\": [\n    {\n      \"field\": \"email\",\n      \"message\": \"Please enter a valid email address\"\n    }\n  ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const response = pm.response.json();",
+                  "if (response.success && response.data && response.data.tokens) {",
+                  "  pm.collectionVariables.set('accessToken', response.data.tokens.accessToken);",
+                  "  pm.collectionVariables.set('refreshToken', response.data.tokens.refreshToken);",
+                  "  console.log('✅ Tokens saved to collection variables');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "login"]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"ahtsham@example.com\",\n  \"password\": \"Test1234\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Authenticate with email and password to receive JWT tokens.\n\nOn success, accessToken and refreshToken are auto-saved to collection variables."
+          },
+          "response": [
+            {
+              "name": "200 - Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"message\": \"Login successful!\",\n  \"data\": {\n    \"user\": {\n      \"id\": \"uuid-here\",\n      \"fullName\": \"Ahtsham Shakoor\",\n      \"email\": \"ahtsham@example.com\",\n      \"avatarUrl\": null,\n      \"isActive\": true,\n      \"isVerified\": false,\n      \"lastLoginAt\": \"2026-10-22T05:30:00.000Z\"\n    },\n    \"tokens\": {\n      \"accessToken\": \"eyJhbGciOi...\",\n      \"refreshToken\": \"eyJhbGciOi...\",\n      \"expiresIn\": \"1h\"\n    }\n  }\n}"
+            },
+            {
+              "name": "401 - Invalid Credentials",
+              "status": "Unauthorized",
+              "code": 401,
+              "body": "{\n  \"success\": false,\n  \"message\": \"Invalid email or password.\"\n}"
+            },
+            {
+              "name": "403 - Account Deactivated",
+              "status": "Forbidden",
+              "code": 403,
+              "body": "{\n  \"success\": false,\n  \"message\": \"Your account has been deactivated. Contact support.\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Refresh Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const response = pm.response.json();",
+                  "if (response.success && response.data && response.data.tokens) {",
+                  "  pm.collectionVariables.set('accessToken', response.data.tokens.accessToken);",
+                  "  pm.collectionVariables.set('refreshToken', response.data.tokens.refreshToken);",
+                  "  console.log('✅ New tokens saved to collection variables');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/refresh",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "refresh"]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Generate a new access token using a valid refresh token.\n\nUses refresh token rotation — the old refresh token is revoked and a new pair is issued."
+          },
+          "response": [
+            {
+              "name": "200 - Tokens Refreshed",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"message\": \"Token refreshed successfully.\",\n  \"data\": {\n    \"tokens\": {\n      \"accessToken\": \"eyJhbGciOi...\",\n      \"refreshToken\": \"eyJhbGciOi...\",\n      \"expiresIn\": \"1h\"\n    }\n  }\n}"
+            },
+            {
+              "name": "401 - Invalid/Expired Token",
+              "status": "Unauthorized",
+              "code": 401,
+              "body": "{\n  \"success\": false,\n  \"message\": \"Invalid or expired refresh token.\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Auth - Protected Routes",
+      "item": [
+        {
+          "name": "Get My Profile",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "me"]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "description": "Get the currently authenticated user's profile.\n\nRequires: Bearer token in Authorization header."
+          },
+          "response": [
+            {
+              "name": "200 - Profile Data",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"user\": {\n      \"id\": \"uuid-here\",\n      \"fullName\": \"Ahtsham Shakoor\",\n      \"email\": \"ahtsham@example.com\",\n      \"avatarUrl\": null,\n      \"isActive\": true,\n      \"isVerified\": false,\n      \"lastLoginAt\": \"2026-10-22T05:30:00.000Z\",\n      \"createdAt\": \"2026-10-22T05:00:00.000Z\",\n      \"updatedAt\": \"2026-10-22T05:30:00.000Z\"\n    }\n  }\n}"
+            },
+            {
+              "name": "401 - No Token",
+              "status": "Unauthorized",
+              "code": 401,
+              "body": "{\n  \"success\": false,\n  \"message\": \"Access denied. No token provided.\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Update Profile",
+          "request": {
+            "method": "PUT",
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/profile",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "profile"]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Ahtsham Shakoor Updated\",\n  \"avatarUrl\": \"https://example.com/avatar.jpg\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Update the authenticated user's profile.\n\nBoth fields are optional — only provided fields will be updated.\n\nRequires: Bearer token in Authorization header."
+          },
+          "response": [
+            {
+              "name": "200 - Updated",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"message\": \"Profile updated successfully.\",\n  \"data\": {\n    \"user\": {\n      \"id\": \"uuid-here\",\n      \"fullName\": \"Ahtsham Shakoor Updated\",\n      \"email\": \"ahtsham@example.com\",\n      \"avatarUrl\": \"https://example.com/avatar.jpg\",\n      \"isActive\": true,\n      \"isVerified\": false,\n      \"createdAt\": \"2026-10-22T05:00:00.000Z\",\n      \"updatedAt\": \"2026-10-22T05:35:00.000Z\"\n    }\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Change Password",
+          "request": {
+            "method": "PUT",
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/change-password",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "change-password"]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentPassword\": \"Test1234\",\n  \"newPassword\": \"NewSecure1234\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Change the authenticated user's password.\n\nAfter changing, all refresh tokens are revoked — the user must login again on all devices.\n\nRequires: Bearer token in Authorization header."
+          },
+          "response": [
+            {
+              "name": "200 - Password Changed",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"message\": \"Password changed successfully. Please login again.\"\n}"
+            },
+            {
+              "name": "401 - Wrong Current Password",
+              "status": "Unauthorized",
+              "code": 401,
+              "body": "{\n  \"success\": false,\n  \"message\": \"Current password is incorrect.\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/logout",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "logout"]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "description": "Logout the current user and revoke all their refresh tokens.\n\nRequires: Bearer token in Authorization header."
+          },
+          "response": [
+            {
+              "name": "200 - Logged Out",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"message\": \"Logged out successfully. All sessions revoked.\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Scheduled Posts & Publisher",
+      "item": [
+        {
+          "name": "Get Post Stats",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/posts/stats",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "posts", "stats"]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "description": "Get count of total, scheduled, published, draft, and failed posts."
+          }
+        },
+        {
+          "name": "List Scheduled Posts",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/posts?status=all",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "posts"],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "all"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "description": "Retrieve user's posts. Supports filtering by status: all, scheduled, published, draft, failed."
+          }
+        },
+        {
+          "name": "Create & Schedule Post",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/posts",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "posts"]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"Automated post test from LinkedIn Helper Desktop! #Flutter #Dev\",\n  \"scheduled_at\": \"2026-10-23T10:00:00Z\",\n  \"publish_now\": false,\n  \"is_draft\": false\n}"
+            },
+            "description": "Schedule a new post for a future date/time or publish immediately (publish_now: true)."
+          }
+        },
+        {
+          "name": "Publish Post Now",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/posts/{{postId}}/publish-now",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "posts", "{{postId}}", "publish-now"]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "description": "Forces immediate publication of any scheduled post."
+          }
+        },
+        {
+          "name": "Delete Scheduled Post",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/api/posts/{{postId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "posts", "{{postId}}"]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "description": "Deletes a post from the scheduling queue."
+          }
+        }
+      ]
+    }
+  ]
+}
