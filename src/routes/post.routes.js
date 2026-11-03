@@ -9,6 +9,7 @@ const {
   updatePost,
   deletePost,
   publishPostNow,
+  markBrowserPublished,
 } = require('../controllers/post.controller');
 
 // All routes are protected
@@ -28,5 +29,8 @@ router.delete('/:id', deletePost);
 
 // Immediate publish trigger
 router.post('/:id/publish-now', publishPostNow);
+
+// Desktop WebView confirmed publish (no LinkedIn API call)
+router.post('/:id/mark-browser-published', markBrowserPublished);
 
 module.exports = router;

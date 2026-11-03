@@ -27,8 +27,13 @@ async function getPosts(req, res) {
     const params = [userId];
 
     if (status && status !== 'all') {
-      params.push(status);
-      query += ` AND p.status = $${params.length}`;
+      if (status === 'published') {
+        // Include republished posts in the Published filter
+        query += ` AND p.status IN ('published', 'republished')`;
+      } else {
+        params.push(status);
+        query += ` AND p.status = $${params.length}`;
+      }
     }
 
     query += ` ORDER BY p.scheduled_at DESC, p.created_at DESC`;
@@ -57,7 +62,7 @@ async function getPostStats(req, res) {
       SELECT
         COUNT(*) AS total,
         COUNT(CASE WHEN status = 'scheduled' THEN 1 END) AS scheduled,
-        COUNT(CASE WHEN status = 'published' THEN 1 END) AS published,
+        COUNT(CASE WHEN status IN ('published', 'republished') THEN 1 END) AS published,
         COUNT(CASE WHEN status = 'failed' THEN 1 END) AS failed,
         COUNT(CASE WHEN status = 'draft' THEN 1 END) AS draft
       FROM scheduled_posts
@@ -249,9 +254,27 @@ async function updatePost(req, res) {
     }
 
     const post = existing[0];
-    if (post.status === 'published') {
+    const statusOnlyPublish =
+      typeof status === 'string' &&
+      ['published', 'republished'].includes(status) &&
+      content === undefined &&
+      scheduled_at === undefined &&
+      account_id === undefined &&
+      media_url === undefined &&
+      tags === undefined;
+
+    // Block content edits on published posts, but allow status→published/republished
+    // (used as fallback when desktop WebView confirms a live post).
+    if (
+      (post.status === 'published' || post.status === 'republished') &&
+      !statusOnlyPublish
+    ) {
       return res.status(400).json({ success: false, message: 'Cannot edit an already published post' });
     }
+
+    const nextStatus = status || null;
+    const setPublishedAt =
+      nextStatus === 'published' || nextStatus === 'republished';
 
     const updateQuery = `
       UPDATE scheduled_posts
@@ -262,6 +285,8 @@ async function updatePost(req, res) {
         media_url = COALESCE($4, media_url),
         tags = COALESCE($5, tags),
         status = COALESCE($6, status),
+        published_at = CASE WHEN $9 THEN NOW() ELSE published_at END,
+        error_message = CASE WHEN $9 THEN NULL ELSE error_message END,
         updated_at = NOW()
       WHERE id = $7 AND user_id = $8
       RETURNING *
@@ -273,9 +298,10 @@ async function updatePost(req, res) {
       account_id || null,
       media_url || null,
       tags || null,
-      status || null,
+      nextStatus,
       id,
       userId,
+      setPublishedAt,
     ]);
 
     res.status(200).json({
@@ -341,6 +367,60 @@ async function publishPostNow(req, res) {
   }
 }
 
+/**
+ * POST /api/posts/:id/mark-browser-published
+ * Mark a post as published/republished after successful desktop WebView publish.
+ * Does not call LinkedIn API — used when the user already posted in-browser.
+ */
+async function markBrowserPublished(req, res) {
+  try {
+    const userId = req.user.id;
+    const { id } = req.params;
+
+    const checkQuery = `SELECT * FROM scheduled_posts WHERE id = $1 AND user_id = $2`;
+    const { rows: existing } = await pool.query(checkQuery, [id, userId]);
+
+    if (!existing.length) {
+      return res.status(404).json({ success: false, message: 'Post not found' });
+    }
+
+    const post = existing[0];
+    const nextStatus =
+      post.status === 'published' || post.status === 'republished'
+        ? 'republished'
+        : 'published';
+
+    const { rows } = await pool.query(
+      `
+      UPDATE scheduled_posts
+      SET
+        status = $1,
+        published_at = NOW(),
+        error_message = NULL,
+        updated_at = NOW()
+      WHERE id = $2 AND user_id = $3
+      RETURNING *
+      `,
+      [nextStatus, id, userId]
+    );
+
+    res.status(200).json({
+      success: true,
+      message:
+        nextStatus === 'republished'
+          ? 'Post marked as republished'
+          : 'Post marked as published',
+      data: rows[0],
+    });
+  } catch (error) {
+    console.error('markBrowserPublished error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to mark post as published',
+    });
+  }
+}
+
 module.exports = {
   getPosts,
   getPostStats,
@@ -349,4 +429,5 @@ module.exports = {
   updatePost,
   deletePost,
   publishPostNow,
+  markBrowserPublished,
 };

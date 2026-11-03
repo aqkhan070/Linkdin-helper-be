@@ -112,7 +112,7 @@ const migration = `
     tags            VARCHAR(500),
     scheduled_at    TIMESTAMPTZ NOT NULL,
     published_at    TIMESTAMPTZ,
-    status          VARCHAR(50) DEFAULT 'scheduled', -- draft, scheduled, publishing, published, failed
+    status          VARCHAR(50) DEFAULT 'scheduled', -- draft, scheduled, publishing, published, republished, failed
     post_urn        VARCHAR(255),
     error_message   TEXT,
     created_at      TIMESTAMPTZ DEFAULT NOW(),
